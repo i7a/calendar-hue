@@ -10,6 +10,7 @@ from oauth2client import tools
 
 from phue import Bridge
 import datetime
+import json, requests
 
 try:
     import argparse
@@ -22,23 +23,30 @@ except ImportError:
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = 'config/client_secret.json'
 APPLICATION_NAME = 'Calendar-Hue'
+BRIDGE_IP_FINDER_URL = 'https://www.meethue.com/api/nupnp'
 
 NOTIFY_THRESHOLD_SECOND = 600
-HUE_BRIDGE_IP = '10.0.1.78'
 HUE_LIGHT_ID = 2
 HUE_NORMAL_COLOR = [0.3657,0.4331]
 HUE_ALERT_COLOR = [0.674,0.322]
 HUE_TRANSITION_TIME = 50
 
 def alert_time_limit():
-    b = Bridge(HUE_BRIDGE_IP)
+    b = Bridge(get_bridge_ip())
     b.connect()
+    b.logging=('debug')
     b.set_light(HUE_LIGHT_ID, 'xy', HUE_ALERT_COLOR,transitiontime = HUE_TRANSITION_TIME)
 
 def set_normal():
-    b = Bridge(HUE_BRIDGE_IP)
+    b = Bridge(get_bridge_ip())
     b.connect()
+    b.logging=('debug')
     b.set_light(HUE_LIGHT_ID, 'xy', HUE_NORMAL_COLOR,transitiontime = HUE_TRANSITION_TIME)
+
+def get_bridge_ip():
+    resp = requests.get(url=BRIDGE_IP_FINDER_URL)
+    data = json.loads(resp.text)
+    return data[0]['internalipaddress']
 
 
 def get_credentials():
@@ -99,6 +107,7 @@ def main():
         delta = (nextStartTime - datetime.datetime.now()).total_seconds()
 
     print(delta)
+
     if NOTIFY_THRESHOLD_SECOND > delta:
         alert_time_limit()
     else:
